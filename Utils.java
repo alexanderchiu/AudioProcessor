@@ -19,11 +19,11 @@ public class Utils {
         return samples;
     }
 
-/**
- * Performs Cooley–Tukey FFT algorithm and returns array of complex numbers
- * @param  x Radix-2 length N signal array
- * @return   X N sampled spectrum
- */
+    /**
+     * Performs Cooley–Tukey FFT algorithm and returns array of complex numbers
+     * @param  x Radix-2 length N signal array
+     * @return   X Radix-2 length N signal spectrum
+     */
 
     public static ComplexNumber[] fft(ComplexNumber[] x) {
         int N = x.length;
@@ -53,9 +53,33 @@ public class Utils {
             X[k] = ComplexNumber.add(Ek[k], ComplexNumber.multiply(tf, Ok[k]));
             X[k + N / 2] = ComplexNumber.subtract(Ek[k], ComplexNumber.multiply(tf, Ok[k]));
         }
+
         return X;
     }
 
+    /**
+     * Perfoms ifft using fft function
+     * @param  X Radix-2 length N signal spectrum
+     * @return   x Radix-2 length N signal array
+     */
+
+    public static ComplexNumber[] ifft(ComplexNumber[] X) {
+        int N = X.length;
+        ComplexNumber[] x = new ComplexNumber[N];
+
+        for (int k = 0; k < N; k ++) {
+            x[k]  = X[k].conjugate();
+        }
+
+        x = fft(x);
+
+        for (int k = 0; k < N; k ++) {
+            x[k] = x[k].conjugate();
+            x[k] = x[k].times(1.0 / N);
+        }
+
+        return x;
+    }
 
     public static void main(String[] args) {
 
@@ -70,7 +94,9 @@ public class Utils {
 
         ComplexNumber[] X = fft(x);
 
+        ComplexNumber[] y = ifft(X);
+        System.out.println(Arrays.toString(x));
         System.out.println(Arrays.toString(X));
-
+        System.out.println(Arrays.toString(y));
     }
 }
