@@ -18,7 +18,20 @@ public class Utils {
         return samples;
     }
 
-    public static void main(String[] args) {
+    public static ComplexNumber[] fft(double[] window){
+    	int N = window.length;
+
+
+
+
+    	ComplexNumber[] spectrum = {};
+
+    	return spectrum;
 
     }
+
+
+    public static void main(String[] args) {
+
+    } 
 }
