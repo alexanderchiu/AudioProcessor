@@ -55,6 +55,12 @@ public class ComplexNumber
 		this.real = real;
 		this.imaginary = imaginary;
 	}
+
+		public ComplexNumber(double real)
+	{
+		this.real = real;
+		this.imaginary = 0;
+	}
 	
 	/**
 	* Adds another <code>ComplexNumber</code> to the current complex number.
