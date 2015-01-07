@@ -80,7 +80,7 @@ public class Utils {
 
         return x;
     }
-    
+
 /**
  * [Lanczos approximation of gamma function
  * @param  x Input value
@@ -106,7 +106,7 @@ public class Utils {
         }
 
         return Math.sqrt(2 * Math.PI) * Math.pow(t, x + 0.5) * Math.exp(-t) * a;
-    }
+    }mma
 
     public static void main(String[] args) {
 
