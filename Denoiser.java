@@ -13,46 +13,35 @@ public class Denoiser {
      */
 
     private static double[][] segmentSignal(double[] ss, int ww, double or ) {
-
         int len = ss.length;
         double d = 1 - or;
         int frames = (int)(Math.floor((len - d) / ww / d));
         int start = 0;
         int stop = 0;
-        double[] window = hamming(ww);
+        double[] window = Utils.hamming(ww);
 
         double[][] seg = new double[ww][frames];
 
         for (int i = 0; i < frames; i++) {
             start = (int)(i * ww * or );
             stop =  start + ww;
+
             for (int k = 0; k < ww; k++) {
-                seg[k][i] = ss[start + k] * window[k];
+                // seg[k][i] = ss[start + k] * window[k];
+                seg[k][i] = ss[start + k];
             }
-
         }
-
         return seg;
     }
 
-    /**
-     * Calculates N samples of Hamming window
-     * @param N Number of samples
-     * @return samples Array of samples
-     */
-
-    private static double[] hamming(int N) {
-        double[] samples = new double[N];
-
-        for (int k = 0; k < N; k++) {
-            samples[k] = 0.54 - 0.46 * Math.cos(2 * Math.PI * k / (N - 1));
-        }
-        return samples;
-
-    }
+/**
+ * Overlap and add segments to calculate reconstructed signal
+ * @param  segments 2D array of overlapping signal segments
+ * @param  or overlap ratio
+ * @return   reconstructedSignal Speech signal post speech denoising
+ */
 
     private static double[] overlapAndAdd(double[][] segments, double or ) {
-
         int ww = segments.length;
         int frames = segments[0].length;
         int start = 0;
@@ -68,13 +57,11 @@ public class Denoiser {
                reconstructedSignal[start+k] = reconstructedSignal[start+k] + segments[k][i];
             }
          }
-
-
         return reconstructedSignal;
     }
 
     public static void main(String[] args) {
-        double[] test = {1, 2, 3, 3, 3, 4, 2,1, 1, 1, 2, 2};
+        double[] test = {1, 2, 3,4, 5, 6, 7,8, 9, 10, 11, 12};
 
         double[][] stack = segmentSignal(test, 4, 0.5);
         double[] recon = overlapAndAdd(stack,0.5);
