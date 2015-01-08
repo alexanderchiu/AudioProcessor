@@ -81,11 +81,11 @@ public class Utils {
         return x;
     }
 
-/**
- * [Lanczos approximation of gamma function
- * @param  x Input value
- * @return  a Value of gamma function at x
- */
+    /**
+     * [Lanczos approximation of gamma function
+     * @param  x Input value
+     * @return  a Value of gamma function at x
+     */
 
     public static double gamma(double x) {
         int g = 7;
@@ -106,11 +106,52 @@ public class Utils {
         }
 
         return Math.sqrt(2 * Math.PI) * Math.pow(t, x + 0.5) * Math.exp(-t) * a;
-    }mma
+    }
+
+    /**
+     * Calculates mean of multidimensional array across axis of choice
+     * @param  data Multidimensional data array
+     * @param  axis Axis to calculate mean across
+     * @return   mean Array of mean values  
+     */
+
+    public static double[] mean(double[][] data, int axis) {
+        double[] mean;
+        int rows = data.length;
+        int cols = data[0].length;
+
+        if (axis != 1 && axis != 0) {
+            throw new RuntimeException("Unknown axis. Choose 0 for columns or 1 for rows");
+        }
+
+        if (axis == 0) {
+            mean = new double[cols];
+            for (int c = 0; c < cols; c++) {
+                double sum = 0.0;
+                for (int r = 0; r < rows; r++) {
+                    sum += data[r][c];
+                }
+                mean[c] = sum / rows;
+            }
+        } else {
+            mean = new double[rows];
+
+            for (int r = 0; r < rows; r++) {
+                double sum = 0.0;
+                for (int c = 0; c < cols; c++) {
+                    sum += data[r][c];
+                }
+                mean[r] = sum / cols;
+            }
+        }
+        return mean;
+    }
 
     public static void main(String[] args) {
 
-        double x = gamma(1.5);
-        System.out.println(x);
+        double marks[][] = {{5, 6, 7, 8, 9}, {1, 2, 3, 4, 5}, {2, 2, 2, 2, 2}};
+        double[] mean = mean(marks, 1);
+        System.out.println(Arrays.deepToString(marks));
+        System.out.println(Arrays.toString(mean));
     }
 }
