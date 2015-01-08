@@ -1,17 +1,23 @@
 import java.util.Arrays;
+
 public class Denoiser implements AudioProcessor {
 
     private static int windowLength = 256;
     private static double overlapRatio = 0.5;
     private int fs;
-    private double noSpeechDuration;
-    private double noSpeechSegments;
+    private double noSpeechDuration  = 0.4;
+    private int noSpeechSegments;
     private boolean speechFlag;
     private boolean noiseFlag;
     private int noiseCounter;
     private int noiseLength;
 
-    public Denoiser() {
+    public Denoiser(int fs, double noSpeechDuration) {
+        this.fs = fs;
+        this.noSpeechDuration = noSpeechDuration;
+        this.noSpeechSegments = (int)Math.floor((noSpeechDuration * fs - windowLength) / (overlapRatio * windowLength) + 1);
+
+        System.out.println(this.noSpeechSegments);
     }
 
     public double[] process(double[] input) {
@@ -21,13 +27,13 @@ public class Denoiser implements AudioProcessor {
         int frames = sampledSignalWindowed[0].length;
         ComplexNumber[][] sampledSignalWindowedComplex = new ComplexNumber[frames][windowLength];
         ComplexNumber[][] signalFFT = new ComplexNumber[frames][windowLength];
-       double[][] signalFFTMagnitude = new double[frames][windowLength];
+        double[][] signalFFTMagnitude = new double[frames][windowLength];
         double[][] signalFFTPhase = new double[frames][windowLength];
 
 
         for (int i = 0; i < frames; i++) {
             for (int k = 0; k < windowLength; k++) {
-                sampledSignalWindowedComplex[i][k] = new ComplexNumber(sampledSignalWindowed[k][i]);
+                sampledSignalWindowedComplex[i][k] = new ComplexNumber(sampledSignalWindowed[k][i]); //convert samples to Complex form for fft and transpose matrix
             }
         }
 
@@ -42,9 +48,16 @@ public class Denoiser implements AudioProcessor {
                 signalFFTPhase[i][k] =  signalFFT[i][k].getArg();
             }
         }
-        System.out.println(Arrays.deepToString(signalFFTMagnitude));
 
+        double[][] noise = new double[frames][noSpeechSegments];
+       
+        noise  = Arrays.copyOfRange(signalFFTMagnitude, 0, noSpeechSegments);
+        double[] noiseMean = Utils.mean(noise,0);
+        
+        // System.out.println(Arrays.toString(noiseMean));
+        // System.out.println(noiseMean.length);
 
+        
         double[] enhanced = {};
 
         return enhanced;

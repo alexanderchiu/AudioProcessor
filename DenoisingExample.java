@@ -9,7 +9,7 @@ public class DenoisingExample {
 
             // Display information about the wav file
             wavFile.display();
-
+            int fs = (int)wavFile.getSampleRate();
             // Get the number of audio channels in the wav file
             int numChannels = wavFile.getNumChannels();
             int numFrames = (int)wavFile.getNumFrames();
@@ -24,7 +24,7 @@ public class DenoisingExample {
             // Close the wavFile
             wavFile.close();
 
-           Denoiser denoiser = new Denoiser();
+           Denoiser denoiser = new Denoiser(fs,0.4);
 
            double[] enhanced = denoiser.process(buffer);
 
