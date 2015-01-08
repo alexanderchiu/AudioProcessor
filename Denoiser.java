@@ -1,15 +1,57 @@
 import java.util.Arrays;
-public class Denoiser implements AudioProcessor{
+public class Denoiser implements AudioProcessor {
+
+    private static int windowLength = 256;
+    private static double overlapRatio = 0.5;
+    private int fs;
+    private double noSpeechDuration;
+    private double noSpeechSegments;
+    private boolean speechFlag;
+    private boolean noiseFlag;
+    private int noiseCounter;
+    private int noiseLength;
 
     public Denoiser() {
     }
 
-    public double[] process(double[] input){
+    public double[] process(double[] input) {
+
+        double[][] sampledSignalWindowed = segmentSignal(input, windowLength, overlapRatio);
+
+        int frames = sampledSignalWindowed[0].length;
+        ComplexNumber[][] sampledSignalWindowedComplex = new ComplexNumber[frames][windowLength];
+        ComplexNumber[][] signalFFT = new ComplexNumber[frames][windowLength];
+       double[][] signalFFTMagnitude = new double[frames][windowLength];
+        double[][] signalFFTPhase = new double[frames][windowLength];
+
+
+        for (int i = 0; i < frames; i++) {
+            for (int k = 0; k < windowLength; k++) {
+                sampledSignalWindowedComplex[i][k] = new ComplexNumber(sampledSignalWindowed[k][i]);
+            }
+        }
+
+        for (int i = 0; i < frames; i++) {
+            signalFFT[i] = Utils.fft(sampledSignalWindowedComplex[i]);
+
+        }
+
+        for (int i = 0; i < frames; i++) {
+            for (int k = 0; k < windowLength; k++) {
+                signalFFTMagnitude[i][k] =  signalFFT[i][k].mod();
+                signalFFTPhase[i][k] =  signalFFT[i][k].getArg();
+            }
+        }
+        System.out.println(Arrays.deepToString(signalFFTMagnitude));
+
+
         double[] enhanced = {};
 
         return enhanced;
-    
+
     }
+
+
     /**
      * Windows sampled signal using overlapping Hamming windows
      * @param ss The sampled signal
@@ -21,7 +63,7 @@ public class Denoiser implements AudioProcessor{
     private static double[][] segmentSignal(double[] ss, int ww, double or ) {
         int len = ss.length;
         double d = 1 - or;
-        int frames = (int)(Math.floor((len - d) / ww / d));
+        int frames = (int)(Math.floor((len - ww) / ww / d));
         int start = 0;
         int stop = 0;
         double[] window = Utils.hamming(ww);
@@ -33,19 +75,18 @@ public class Denoiser implements AudioProcessor{
             stop =  start + ww;
 
             for (int k = 0; k < ww; k++) {
-                // seg[k][i] = ss[start + k] * window[k];
-                seg[k][i] = ss[start + k];
+                seg[k][i] = ss[start + k] * window[k];
             }
         }
         return seg;
     }
 
-/**
- * Overlap and add segments to calculate reconstructed signal
- * @param  segments 2D array of overlapping signal segments
- * @param  or overlap ratio
- * @return   reconstructedSignal Speech signal post speech denoising
- */
+    /**
+     * Overlap and add segments to calculate reconstructed signal
+     * @param  segments 2D array of overlapping signal segments
+     * @param  or overlap ratio
+     * @return   reconstructedSignal Speech signal post speech denoising
+     */
 
     private static double[] overlapAndAdd(double[][] segments, double or ) {
         int ww = segments.length;
@@ -60,23 +101,13 @@ public class Denoiser implements AudioProcessor{
             start = (int)(i * ww * or );
             stop =  start + ww;
             for (int k = 0; k < ww; k++) {
-               reconstructedSignal[start+k] = reconstructedSignal[start+k] + segments[k][i];
+                reconstructedSignal[start + k] = reconstructedSignal[start + k] + segments[k][i];
             }
-         }
+        }
         return reconstructedSignal;
     }
 
     public static void main(String[] args) {
-        double[] test = {1, 2, 3,4, 5, 6, 7,8, 9, 10, 11, 12};
 
-        double[][] stack = segmentSignal(test, 4, 0.5);
-        double[] recon = overlapAndAdd(stack,0.5);
-
-
-	System.out.println(Arrays.toString(test));
-        System.out.println(Arrays.deepToString(stack));
-
-
-        System.out.println(Arrays.toString(recon));
     }
 }
