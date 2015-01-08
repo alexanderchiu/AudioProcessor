@@ -1,9 +1,15 @@
 import java.util.Arrays;
-public class Denoiser {
+public class Denoiser implements AudioProcessor{
 
     public Denoiser() {
     }
 
+    public double[] process(double[] input){
+        double[] enhanced = {};
+
+        return enhanced;
+    
+    }
     /**
      * Windows sampled signal using overlapping Hamming windows
      * @param ss The sampled signal

@@ -1,3 +1,3 @@
 interface AudioProcessor {
-    float[] process(float[] input);
+    double[] process(double[] input);
 }

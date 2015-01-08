@@ -7,7 +7,7 @@ public class DenoisingExample
 		try
 		{
 			// Open the wav file specified as the first argument
-			WavFile wavFile = WavFile.openWavFile(new File(args[0]));
+			WavFile wavFile = WavFile.openWavFile(new File("hynek.wav"));
 
 
 			// Display information about the wav file
@@ -18,31 +18,17 @@ public class DenoisingExample
                              int numFrames = (int)wavFile.getNumFrames();
                              int samples = numFrames*numChannels;
 
-
-                             System.out.println(numChannels);
-                             System.out.println(numFrames);
 			// Create a buffer of 100 frames
 			double[] buffer = new double[samples];
 
                              int framesRead;
 			framesRead = wavFile.readFrames(buffer, numFrames);
 
-
 			// Close the wavFile
 			wavFile.close();
 
 			// Output the minimum and maximum value
 
-
-                           // File f=new File("wav.txt");
-
-
-                           //  PrintWriter out=new PrintWriter(f);
-                           //  for(int i =0;i<numFrames;i++){
-                           //  out.printf("%f ",buffer[i]);
-                           //  }
-                           //  System.out.println("Done ..........");
-                           //  out.close();
 
 		}
 		catch (Exception e)
