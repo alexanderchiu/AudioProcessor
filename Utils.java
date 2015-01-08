@@ -146,7 +146,13 @@ public class Utils {
         }
         return mean;
     }
-
+    public static double mean(double[] data){
+        double sum = 0.0;
+        for(int i =0;i<data.length;i++){
+            sum+=data[i];
+        }
+        return sum/data.length;
+}
     public static void main(String[] args) {
 
         double marks[][] = {{5, 6, 7, 8, 9}, {1, 2, 3, 4, 5}, {2, 2, 2, 2, 2}};
