@@ -1,5 +1,6 @@
 import java.util.Arrays;
 
+
 public class Denoiser implements AudioProcessor {
 
     private static int windowLength;
@@ -21,7 +22,6 @@ public class Denoiser implements AudioProcessor {
         this.noSpeechSegments = (int)Math.floor((noSpeechDuration * fs - windowLength) / (overlapRatio * windowLength) + 1);
         this.speechFlag = false;
         this.noiseFlag = false;
-        this.noiseCounter = 0;
         this.noiseLength = noiseLength;
     }
 
@@ -54,48 +54,100 @@ public class Denoiser implements AudioProcessor {
             }
         }
 
-        double[][] noise = new double[frames][noSpeechSegments];
+        double[][] noise = new double[this.noSpeechSegments][windowLength];
+        double[][] noiseMag = new double[this.noSpeechSegments][windowLength];
 
-        noise  = Arrays.copyOfRange(signalFFTMagnitude, 0, noSpeechSegments);
+        noise  = Arrays.copyOfRange(signalFFTMagnitude, 0, this.noSpeechSegments);
 
 
         double[] noiseMean = Utils.mean(noise, 0);
 
-        for (int i = 0; i < noSpeechSegments; i++) {
+        for (int i = 0; i < this.noSpeechSegments; i++) {
             for (int k = 0; k < windowLength; k++) {
-                noise[i][k] = Math.pow(noise[i][k], 2);
+                noiseMag[i][k] = Math.pow(noise[i][k], 2);
             }
         }
 
-        double[] noiseVar = Utils.mean(noise, 0);
+        double[] noiseVar = Utils.mean(noiseMag, 0);
 
         double gamma1p5 = Utils.gamma(1.5);
-        double[] G = new double[windowLength];
+        double[] gain = new double[windowLength];
         double[] gamma = new double[windowLength];
+        double[] gammaUpdate = new double[windowLength];
+        double[] xi = new double[windowLength];
+        double[] nu = new double[windowLength];
 
-        Arrays.fill(G, 1);
+        double alpha = 0.99;
+
+        Arrays.fill(gain, 1);
         Arrays.fill(gamma, 1);
 
         double[][] enhancedSpectrum = new double[frames][windowLength];
 
 
+        for (int i = 0; i < frames; i++) {
+            if (i < this.noSpeechSegments) {
+                this.speechFlag = false;
+                this.noiseCounter = 100;
+            } else {
+                vad(signalFFTMagnitude[i], noiseMean, 3, 8);
+            }
 
+            if (!this.speechFlag) {
+                for (int k = 0; k < windowLength; k++) {
+                    noiseMean[k] = (this.noiseLength * noiseMean[k] + signalFFTMagnitude[i][k]) / (this.noiseLength + 1);
+                    noiseVar[k] = (this.noiseLength * noiseVar[k] + Math.pow(signalFFTMagnitude[i][k], 2)) / (this.noiseLength + 1);
+                    gammaUpdate[k] = Math.pow(signalFFTMagnitude[i][k], 2) / noiseVar[k];
+                    xi[k] = alpha * Math.pow(gain[k], 2) * gamma[k] + (1 - alpha) * Math.max(gammaUpdate[k] - 1, 0);
+                    gamma[k] = gammaUpdate[k];
+                    nu[k] = gamma[k] * xi[k] / (xi[k] + 1);
+                    gain[k] = (gamma1p5 * Math.sqrt(nu[k])) / gamma[k] * Math.exp(-1 * nu[k] / 2) * ((1 + nu[k]) * Bessel.modBesselFirstZero(nu[k] / 2) + nu[k] * Bessel.modBesselFirstOne(nu[k] / 2));
+                    if (Double.isNaN(gain[k])) {
+                        gain[k] = xi[k] / (xi[k] + 1);
+                    }
+                    enhancedSpectrum[i][k] = gain[k] * signalFFTMagnitude[i][k];
+                }
+            }
+        }
 
+        ComplexNumber[][] enhancedSpectrumComplex = new ComplexNumber[frames][windowLength];
 
+        for (int i = 0; i < frames; i++) {
+            for (int k = 0; k < windowLength; k++) {
+                enhancedSpectrumComplex[i][k] = ComplexNumber.exp(new ComplexNumber(0, signalFFTPhase[i][k])); //convert samples to Complex form for fft and transpose matrix
+                enhancedSpectrumComplex[i][k] = enhancedSpectrumComplex[i][k].times(enhancedSpectrum[i][k]);
+            }
+        }
 
+        ComplexNumber[][] enhancedSegments = new ComplexNumber[frames][windowLength];
+         double[][] enhancedSegmentsReal = new double[windowLength][frames];
 
+        for (int i = 0; i < frames; i++) {
+            enhancedSegments[i] = Utils.ifft(enhancedSpectrumComplex[i]);
+        }
 
-        System.out.println(Arrays.toString(G));
+        for (int i = 0; i < frames; i++) {
+            for (int k = 0; k < windowLength; k++) {
+                enhancedSegmentsReal[k][i] =  enhancedSegments[i][k].getRe(); //convert samples to Complex form for fft and transpose matrix
+            }
+        }
 
-
-
-        double[] enhanced = {};
-
+        // System.out.println(Arrays.deepToString(enhancedSegmentsReal));
+        double[] enhanced = overlapAndAdd(enhancedSegmentsReal,overlapRatio);
+        System.out.println(Arrays.toString(enhanced));
         return enhanced;
 
     }
 
-    public void vad(double[] frame, double[] noise, int noiseCounter, int noiseThreshold, int frameReset) {
+    /**
+     * Voice activity detector that predicts wheter the current frame contains speech or not
+     * @param frame  Current frame
+     * @param noise   Current noise estimate
+     * @param noiseCounter  Number of previous noise frames
+     * @param noiseThreshold User set threshold
+     * @param frameReset Number of frames after which speech is reset to noise
+     */
+    public void vad(double[] frame, double[] noise, int noiseThreshold, int frameReset) {
 
         double[] spectralDifference = new double[windowLength];
 
@@ -107,19 +159,20 @@ public class Denoiser implements AudioProcessor {
         }
 
         double diff = Utils.mean(spectralDifference);
+        // System.out.println(diff);
 
         if (diff < noiseThreshold) {
-            noiseFlag = true;
-            noiseCounter += 1;
+            this.noiseFlag = true;
+            this.noiseCounter++;
         } else {
-            noiseFlag = false;
-            noiseCounter = 0;
+            this.noiseFlag = false;
+            this.noiseCounter = 0;
         }
 
-        if (noiseCounter > frameReset) {
-            speechFlag = false;
+        if (this.noiseCounter > frameReset) {
+            this.speechFlag = false;
         } else {
-            speechFlag = true;
+            this.speechFlag = true;
         }
     }
 

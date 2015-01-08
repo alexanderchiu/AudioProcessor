@@ -24,11 +24,13 @@ public class DenoisingExample {
             // Close the wavFile
             wavFile.close();
 
-           Denoiser denoiser = new Denoiser(fs,0.4);
+           Denoiser denoiser = new Denoiser(fs,0.4,9);
 
            double[] enhanced = denoiser.process(buffer);
 
+           WavFile output = WavFile.newWavFile(new File("test.wav"), 1, numFrames, 16, fs);
 
+           output.writeFrames(enhanced, enhanced.length);
             // Output the minimum and maximum value
 
 
