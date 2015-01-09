@@ -7,6 +7,14 @@ Usage
 ==============
 java DenoisingExample [wavfile]
 
+Denoiser denoiser = new Denoiser(parameters...);
+float[][] input = ...;
+float[][] output = denoiser.process(input);
+
+Denoiser denoiser = new Denoiser(parameters...);
+float[] input = ...;
+float[] output = denoiser.process(input);
+
 References
 ==============
 [1] Forward Backward Decision Directed Approach For Speech Enhancement Richard C. Hendriks, Richard Heusdens and Jesper Jensen<br/>
