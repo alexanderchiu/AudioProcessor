@@ -1,6 +1,5 @@
 import java.util.Arrays;
 
-
 public class Denoiser implements AudioProcessor {
 
     private static int windowLength;
@@ -12,8 +11,23 @@ public class Denoiser implements AudioProcessor {
     private boolean noiseFlag;
     private int noiseCounter;
     private int noiseLength;
+    private int noiseThreshold;
+    private int frameReset;
 
-    public Denoiser(int fs, double noSpeechDuration, int noiseLength) {
+    public Denoiser(int fs) {
+        windowLength = 256;
+        overlapRatio = 0.5;
+        this.fs = fs;
+        this.noSpeechDuration = 0.4;
+        this.noSpeechSegments = (int)Math.floor((noSpeechDuration * fs - windowLength) / (overlapRatio * windowLength) + 1);
+        this.speechFlag = false;
+        this.noiseFlag = false;
+        this.noiseLength = 9;
+        this.noiseThreshold = 3;
+        this.frameReset = 8;
+    }
+
+    public Denoiser(int fs, double noSpeechDuration, int noiseLength, int noiseThreshold, int frameReset) {
         windowLength = 256;
         overlapRatio = 0.5;
 
@@ -23,28 +37,33 @@ public class Denoiser implements AudioProcessor {
         this.speechFlag = false;
         this.noiseFlag = false;
         this.noiseLength = noiseLength;
+        this.noiseThreshold = noiseThreshold;
+        this.frameReset = frameReset;
     }
 
+    /**
+     * Performs speech denoising on array of doubles based on  Speech Enhancement Using a Minimum Mean-Square
+     * Error Short-Time Spectral Amplitude Estimator by Eprahiam and Malah
+     * @param  input Double array of signal values
+     * @return   enhanced Double array of enhanced signal array
+     */
+    
     public double[] process(double[] input) {
-
         double[][] sampledSignalWindowed = segmentSignal(input, windowLength, overlapRatio);
-
         int frames = sampledSignalWindowed[0].length;
         ComplexNumber[][] sampledSignalWindowedComplex = new ComplexNumber[frames][windowLength];
         ComplexNumber[][] signalFFT = new ComplexNumber[frames][windowLength];
         double[][] signalFFTMagnitude = new double[frames][windowLength];
         double[][] signalFFTPhase = new double[frames][windowLength];
 
-
         for (int i = 0; i < frames; i++) {
             for (int k = 0; k < windowLength; k++) {
-                sampledSignalWindowedComplex[i][k] = new ComplexNumber(sampledSignalWindowed[k][i]); //convert samples to Complex form for fft and transpose matrix
+                sampledSignalWindowedComplex[i][k] = new ComplexNumber(sampledSignalWindowed[k][i]); //convert samples to Complex form for fft and perform transpose
             }
         }
 
         for (int i = 0; i < frames; i++) {
             signalFFT[i] = Utils.fft(sampledSignalWindowedComplex[i]);
-
         }
 
         for (int i = 0; i < frames; i++) {
@@ -59,15 +78,13 @@ public class Denoiser implements AudioProcessor {
 
         noise  = Arrays.copyOfRange(signalFFTMagnitude, 0, this.noSpeechSegments);
 
-
-        double[] noiseMean = Utils.mean(noise, 0);
-
         for (int i = 0; i < this.noSpeechSegments; i++) {
             for (int k = 0; k < windowLength; k++) {
                 noiseMag[i][k] = Math.pow(noise[i][k], 2);
             }
         }
 
+        double[] noiseMean = Utils.mean(noise, 0);
         double[] noiseVar = Utils.mean(noiseMag, 0);
 
         double gamma1p5 = Utils.gamma(1.5);
@@ -77,23 +94,22 @@ public class Denoiser implements AudioProcessor {
         double[] xi = new double[windowLength];
         double[] nu = new double[windowLength];
 
-        double alpha = 0.99;
+        double alpha = 0.99; //Smoothing factor
 
         Arrays.fill(gain, 1);
         Arrays.fill(gamma, 1);
 
         double[][] enhancedSpectrum = new double[frames][windowLength];
 
-
         for (int i = 0; i < frames; i++) {
             if (i < this.noSpeechSegments) {
                 this.speechFlag = false;
                 this.noiseCounter = 100;
             } else {
-                vad(signalFFTMagnitude[i], noiseMean, 3, 8);
+                vad(signalFFTMagnitude[i], noiseMean);
             }
 
-            if (this.speechFlag == false) {
+            if (this.speechFlag == false) { // Noise estimate update during segements with no speech
                 for (int k = 0; k < windowLength; k++) {
                     noiseMean[k] = (this.noiseLength * noiseMean[k] + signalFFTMagnitude[i][k]) / (this.noiseLength + 1);
                     noiseVar[k] = (this.noiseLength * noiseVar[k] + Math.pow(signalFFTMagnitude[i][k], 2)) / (this.noiseLength + 1);
@@ -110,14 +126,13 @@ public class Denoiser implements AudioProcessor {
                 }
                 enhancedSpectrum[i][k] = gain[k] * signalFFTMagnitude[i][k];
             }
-
         }
-        // System.out.println(Arrays.toString(gammaUpdate));
+
         ComplexNumber[][] enhancedSpectrumComplex = new ComplexNumber[frames][windowLength];
 
         for (int i = 0; i < frames; i++) {
             for (int k = 0; k < windowLength; k++) {
-                enhancedSpectrumComplex[i][k] = ComplexNumber.exp(new ComplexNumber(0, signalFFTPhase[i][k])); //convert samples to Complex form for fft and transpose matrix
+                enhancedSpectrumComplex[i][k] = ComplexNumber.exp(new ComplexNumber(0, signalFFTPhase[i][k]));
                 enhancedSpectrumComplex[i][k] = enhancedSpectrumComplex[i][k].times(enhancedSpectrum[i][k]);
             }
         }
@@ -131,15 +146,12 @@ public class Denoiser implements AudioProcessor {
 
         for (int i = 0; i < frames; i++) {
             for (int k = 0; k < windowLength; k++) {
-                enhancedSegmentsReal[k][i] =  enhancedSegments[i][k].getRe(); //convert samples to Complex form for fft and transpose matrix
+                enhancedSegmentsReal[k][i] =  enhancedSegments[i][k].getRe(); //convert samples to real from and perform tranpose
             }
         }
 
-        // System.out.println(Arrays.deepToString(enhancedSegmentsReal));
         double[] enhanced = overlapAndAdd(enhancedSegmentsReal, overlapRatio);
-
         return enhanced;
-
     }
 
     /**
@@ -148,10 +160,9 @@ public class Denoiser implements AudioProcessor {
      * @param noise   Current noise estimate
      * @param noiseCounter  Number of previous noise frames
      * @param noiseThreshold User set threshold
-     * @param frameReset Number of frames after which speech is reset to noise
+     * @param frameReset Number of frames after which speech flag is reset
      */
-    public void vad(double[] frame, double[] noise, int noiseThreshold, int frameReset) {
-
+    public void vad(double[] frame, double[] noise) {
         double[] spectralDifference = new double[windowLength];
 
         for (int i = 0; i < windowLength; i++) {
@@ -162,9 +173,8 @@ public class Denoiser implements AudioProcessor {
         }
 
         double diff = Utils.mean(spectralDifference);
-        // System.out.println(diff);
 
-        if (diff < noiseThreshold) {
+        if (diff < this.noiseThreshold) {
             this.noiseFlag = true;
             this.noiseCounter++;
         } else {
@@ -172,7 +182,7 @@ public class Denoiser implements AudioProcessor {
             this.noiseCounter = 0;
         }
 
-        if (this.noiseCounter > frameReset) {
+        if (this.noiseCounter > this.frameReset) {
             this.speechFlag = false;
         } else {
             this.speechFlag = true;
@@ -193,14 +203,13 @@ public class Denoiser implements AudioProcessor {
         int frames = (int)(Math.floor((len - ww) / ww / d));
         int start = 0;
         int stop = 0;
-        double[] window = Utils.hamming(ww);
 
+        double[] window = Utils.hamming(ww);
         double[][] seg = new double[ww][frames];
 
         for (int i = 0; i < frames; i++) {
             start = (int)(i * ww * or );
             stop =  start + ww;
-
             for (int k = 0; k < ww; k++) {
                 seg[k][i] = ss[start + k] * window[k];
             }
@@ -235,6 +244,5 @@ public class Denoiser implements AudioProcessor {
     }
 
     public static void main(String[] args) {
-
     }
 }
