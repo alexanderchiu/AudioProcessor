@@ -28,7 +28,7 @@ public class DenoisingExample {
 
            double[] enhanced = denoiser.process(buffer);
 
-           WavFile output = WavFile.newWavFile(new File("test.wav"), 1, numFrames, 16, fs);
+           WavFile output = WavFile.newWavFile(new File("enhanced.wav"), 1, numFrames, 16, fs);
 
            output.writeFrames(enhanced, enhanced.length);
             // Output the minimum and maximum value

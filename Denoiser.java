@@ -93,23 +93,26 @@ public class Denoiser implements AudioProcessor {
                 vad(signalFFTMagnitude[i], noiseMean, 3, 8);
             }
 
-            if (!this.speechFlag) {
+            if (this.speechFlag == false) {
                 for (int k = 0; k < windowLength; k++) {
                     noiseMean[k] = (this.noiseLength * noiseMean[k] + signalFFTMagnitude[i][k]) / (this.noiseLength + 1);
                     noiseVar[k] = (this.noiseLength * noiseVar[k] + Math.pow(signalFFTMagnitude[i][k], 2)) / (this.noiseLength + 1);
-                    gammaUpdate[k] = Math.pow(signalFFTMagnitude[i][k], 2) / noiseVar[k];
-                    xi[k] = alpha * Math.pow(gain[k], 2) * gamma[k] + (1 - alpha) * Math.max(gammaUpdate[k] - 1, 0);
-                    gamma[k] = gammaUpdate[k];
-                    nu[k] = gamma[k] * xi[k] / (xi[k] + 1);
-                    gain[k] = (gamma1p5 * Math.sqrt(nu[k])) / gamma[k] * Math.exp(-1 * nu[k] / 2) * ((1 + nu[k]) * Bessel.modBesselFirstZero(nu[k] / 2) + nu[k] * Bessel.modBesselFirstOne(nu[k] / 2));
-                    if (Double.isNaN(gain[k])) {
-                        gain[k] = xi[k] / (xi[k] + 1);
-                    }
-                    enhancedSpectrum[i][k] = gain[k] * signalFFTMagnitude[i][k];
                 }
             }
-        }
+            for (int k = 0; k < windowLength; k++) {
+                gammaUpdate[k] = Math.pow(signalFFTMagnitude[i][k], 2) / noiseVar[k];
+                xi[k] = alpha * Math.pow(gain[k], 2) * gamma[k] + (1 - alpha) * Math.max(gammaUpdate[k] - 1, 0);
+                gamma[k] = gammaUpdate[k];
+                nu[k] = gamma[k] * xi[k] / (xi[k] + 1);
+                gain[k] = (gamma1p5 * Math.sqrt(nu[k])) / gamma[k] * Math.exp(-1 * nu[k] / 2) * ((1 + nu[k]) * Bessel.modBesselFirstZero(nu[k] / 2) + nu[k] * Bessel.modBesselFirstOne(nu[k] / 2));
+                if (Double.isNaN(gain[k])) {
+                    gain[k] = xi[k] / (xi[k] + 1);
+                }
+                enhancedSpectrum[i][k] = gain[k] * signalFFTMagnitude[i][k];
+            }
 
+        }
+        // System.out.println(Arrays.toString(gammaUpdate));
         ComplexNumber[][] enhancedSpectrumComplex = new ComplexNumber[frames][windowLength];
 
         for (int i = 0; i < frames; i++) {
@@ -120,7 +123,7 @@ public class Denoiser implements AudioProcessor {
         }
 
         ComplexNumber[][] enhancedSegments = new ComplexNumber[frames][windowLength];
-         double[][] enhancedSegmentsReal = new double[windowLength][frames];
+        double[][] enhancedSegmentsReal = new double[windowLength][frames];
 
         for (int i = 0; i < frames; i++) {
             enhancedSegments[i] = Utils.ifft(enhancedSpectrumComplex[i]);
@@ -133,8 +136,8 @@ public class Denoiser implements AudioProcessor {
         }
 
         // System.out.println(Arrays.deepToString(enhancedSegmentsReal));
-        double[] enhanced = overlapAndAdd(enhancedSegmentsReal,overlapRatio);
-        System.out.println(Arrays.toString(enhanced));
+        double[] enhanced = overlapAndAdd(enhancedSegmentsReal, overlapRatio);
+
         return enhanced;
 
     }
