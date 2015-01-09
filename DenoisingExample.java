@@ -3,8 +3,11 @@ import java.util.Arrays;
 public class DenoisingExample {
     public static void main(String[] args) {
         try {
+            String filename = args[0];
+            int pos = filename.lastIndexOf(".");
+            String justName = pos > 0 ? filename.substring(0, pos) : filename;
             // Open the wav file specified as the first argument
-            WavFile wavFile = WavFile.openWavFile(new File("fulcrum1_in_pcm_11ks.wav"));
+            WavFile wavFile = WavFile.openWavFile(new File(filename));
 
             // Display information about the wav file
             wavFile.display();
@@ -27,7 +30,7 @@ public class DenoisingExample {
             double[] enhancedSingle;
             double[][] enhanced;
 
-            WavFile output = WavFile.newWavFile(new File("enhanced.wav"), numChannels, numFrames, validBits, fs);
+            WavFile output = WavFile.newWavFile(new File(justName+"_enhanced.wav"), numChannels, numFrames, validBits, fs);
 
             Denoiser denoiser = new Denoiser(fs);
             if (numChannels == 1) {
