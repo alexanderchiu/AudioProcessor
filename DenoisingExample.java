@@ -32,7 +32,7 @@ public class DenoisingExample {
 
             WavFile output = WavFile.newWavFile(new File(justName+"_enhanced.wav"), numChannels, numFrames, validBits, fs);
 
-            Denoiser denoiser = new Denoiser(fs);
+            Denoiser denoiser = new Denoiser(fs,0.4,9,2,8);
             if (numChannels == 1) {
                 enhancedSingle =  denoiser.process(buffer);
                 output.writeFrames(enhancedSingle, enhancedSingle.length);
@@ -46,7 +46,7 @@ public class DenoisingExample {
 
                 for (int i = 0; i < enhanced[0].length; i++) {
                     for (int k = 0; k < numChannels; k++) {
-                        buffer[i * numChannels + k] = splitChannel[k][i];
+                        buffer[i * numChannels + k] = enhanced[k][i];
                     }
 
                 }
