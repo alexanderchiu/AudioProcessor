@@ -4,7 +4,7 @@ public class DenoisingExample {
     public static void main(String[] args) {
         try {
             // Open the wav file specified as the first argument
-            WavFile wavFile = WavFile.openWavFile(new File("noisy.wav"));
+            WavFile wavFile = WavFile.openWavFile(new File("fulcrum1_in_pcm_11ks.wav"));
 
             // Display information about the wav file
             wavFile.display();
@@ -16,18 +16,40 @@ public class DenoisingExample {
             int samples = numFrames * numChannels;
 
             double[] buffer = new double[samples];
+            double[][] splitChannel = new double[numChannels][numFrames];
 
             int framesRead;
             framesRead = wavFile.readFrames(buffer, numFrames);
 
-            wavFile.close();
 
-            Denoiser denoiser = new Denoiser(fs);
-            double[] enhanced = denoiser.process(buffer);
+            // Close the wavFile
+            wavFile.close();
+            double[] enhancedSingle;
+            double[][] enhanced;
 
             WavFile output = WavFile.newWavFile(new File("enhanced.wav"), numChannels, numFrames, validBits, fs);
-            output.writeFrames(enhanced, enhanced.length);
-            output.display();
+
+            Denoiser denoiser = new Denoiser(fs);
+            if (numChannels == 1) {
+                enhancedSingle =  denoiser.process(buffer);
+                output.writeFrames(enhancedSingle, enhancedSingle.length);
+            } else {
+                for (int i = 0; i < numFrames; i++) {
+                    for (int k = 0; k < numChannels; k++) {
+                        splitChannel[k][i] = buffer[i * numChannels + k];
+                    }
+                }
+                enhanced = denoiser.process(splitChannel);
+
+                for (int i = 0; i < enhanced[0].length; i++) {
+                    for (int k = 0; k < numChannels; k++) {
+                        buffer[i * numChannels + k] = splitChannel[k][i];
+                    }
+
+                }
+                output.writeFrames(buffer, buffer.length);
+            }
+
         } catch (Exception e) {
             System.err.println(e);
         }
