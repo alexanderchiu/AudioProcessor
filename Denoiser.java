@@ -27,10 +27,22 @@ public class Denoiser implements AudioProcessor {
         this.frameReset = 8;
     }
 
+    public Denoiser(int fs, double noSpeechDuration){
+        windowLength = 256;
+        overlapRatio = 0.5;
+        this.fs = fs;
+        this.noSpeechDuration = noSpeechDuration;
+        this.noSpeechSegments = (int)Math.floor((noSpeechDuration * fs - windowLength) / (overlapRatio * windowLength) + 1);
+        this.speechFlag = false;
+        this.noiseFlag = false;
+        this.noiseLength = 9;
+        this.noiseThreshold = 3;
+        this.frameReset = 8;
+    }
+
     public Denoiser(int fs, double noSpeechDuration, int noiseLength, int noiseThreshold, int frameReset) {
         windowLength = 256;
         overlapRatio = 0.5;
-
         this.fs = fs;
         this.noSpeechDuration = noSpeechDuration;
         this.noSpeechSegments = (int)Math.floor((noSpeechDuration * fs - windowLength) / (overlapRatio * windowLength) + 1);
@@ -40,6 +52,22 @@ public class Denoiser implements AudioProcessor {
         this.noiseThreshold = noiseThreshold;
         this.frameReset = frameReset;
     }
+    /**
+     * Process function for multi-channel inputs
+     * @param  input Multi channel signal 
+     * @return   enhanced Multi channel enhanced signal
+     */
+    public double[][] process(double[][] input) {
+        int channels = input.length;
+        int signalLength = input[0].length;
+
+        double[][] enhanced = new double[channels][signalLength];
+
+        for(int i = 0; i < channels; i++){
+            enhanced[i] = process(input[i]);
+        }
+        return enhanced;
+    }
 
     /**
      * Performs speech denoising on array of doubles based on  Speech Enhancement Using a Minimum Mean-Square
@@ -47,7 +75,7 @@ public class Denoiser implements AudioProcessor {
      * @param  input Double array of signal values
      * @return   enhanced Double array of enhanced signal array
      */
-    
+
     public double[] process(double[] input) {
         double[][] sampledSignalWindowed = segmentSignal(input, windowLength, overlapRatio);
         int frames = sampledSignalWindowed[0].length;
@@ -162,7 +190,7 @@ public class Denoiser implements AudioProcessor {
      * @param noiseThreshold User set threshold
      * @param frameReset Number of frames after which speech flag is reset
      */
-    public void vad(double[] frame, double[] noise) {
+    private void vad(double[] frame, double[] noise) {
         double[] spectralDifference = new double[windowLength];
 
         for (int i = 0; i < windowLength; i++) {
