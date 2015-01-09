@@ -7,13 +7,13 @@ Usage
 ==============
 java DenoisingExample [wavfile]
 
-Denoiser denoiser = new Denoiser(parameters...);
-float[][] input = ...;
-float[][] output = denoiser.process(input);
+Denoiser denoiser = new Denoiser(parameters...);<br/>
+float[][] input = ...;<br/>
+float[][] output = denoiser.process(input);<br/>
 
-Denoiser denoiser = new Denoiser(parameters...);
-float[] input = ...;
-float[] output = denoiser.process(input);
+Denoiser denoiser = new Denoiser(parameters...);<br/>
+float[] input = ...;<br/>
+float[] output = denoiser.process(input);<br/>
 
 References
 ==============
