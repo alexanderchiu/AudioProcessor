@@ -125,7 +125,7 @@ public class Denoiser implements AudioProcessor {
         double[] xi = new double[windowLength];
         double[] nu = new double[windowLength];
 
-        double alpha = 0.99; //Smoothing factor
+        double alpha = 0.96; //Smoothing factor
 
         Arrays.fill(gain, 1);
         Arrays.fill(gamma, 1);
@@ -155,9 +155,7 @@ public class Denoiser implements AudioProcessor {
                 gain[k] = (gamma1p5 * Math.sqrt(nu[k])) / gamma[k] * Math.exp(-1 * nu[k] / 2) * ((1 + nu[k]) * Bessel.modBesselFirstZero(nu[k] / 2) + nu[k] * Bessel.modBesselFirstOne(nu[k] / 2));
  
                 if (Double.isNaN(gain[k]) || Double.isInfinite(gain[k])) {
-
                     gain[k] = xi[k] / (xi[k] + 1);
-
                 }
 
                 enhancedSpectrum[i][k] = gain[k] * signalFFTMagnitude[i][k];

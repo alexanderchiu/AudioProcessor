@@ -8,7 +8,7 @@ public class DenoisingExample {
             String justName = pos > 0 ? filename.substring(0, pos) : filename;
             // Open the wav file specified as the first argument
             WavFile wavFile = WavFile.openWavFile(new File(filename));
-
+            
             // Display information about the wav file
             wavFile.display();
             int fs = (int)wavFile.getSampleRate();
