@@ -30,12 +30,21 @@ public class DenoisingExample {
             double[] enhancedSingle;
             double[][] enhanced;
 
-            WavFile output = WavFile.newWavFile(new File(justName+"_enhanced.wav"), numChannels, numFrames, validBits, fs);
+            WavFile output = WavFile.newWavFile(new File(justName + "_enhanced.wav"), numChannels, numFrames, validBits, fs);
 
-            Denoiser denoiser = new Denoiser(fs,0.4,9,2,8);
+            Denoiser denoiser = new Denoiser(fs, 0.4, 9, 2, 8);
             if (numChannels == 1) {
                 enhancedSingle =  denoiser.process(buffer);
                 output.writeFrames(enhancedSingle, enhancedSingle.length);
+                double[] agcsignal;
+
+                AGC agc = new AGC(fs, 0.4, 9, 2, 8);
+
+                agcsignal = agc.process(enhancedSingle);
+                WavFile output2 = WavFile.newWavFile(new File(justName + "_agc.wav"), numChannels, numFrames, validBits, fs);
+
+
+                output2.writeFrames(agcsignal, agcsignal.length);
             } else {
                 for (int i = 0; i < numFrames; i++) {
                     for (int k = 0; k < numChannels; k++) {
@@ -51,6 +60,26 @@ public class DenoisingExample {
 
                 }
                 output.writeFrames(buffer, buffer.length);
+                double[][] agcsignal;
+
+
+                  AGC agc = new AGC(fs, 0.4, 9, 2, 8);
+
+                for (int i = 0; i < numFrames; i++) {
+                    for (int k = 0; k < numChannels; k++) {
+                        splitChannel[k][i] = buffer[i * numChannels + k];
+                    }
+                }
+                agcsignal = agc.process(splitChannel);
+
+                for (int i = 0; i < enhanced[0].length; i++) {
+                    for (int k = 0; k < numChannels; k++) {
+                        buffer[i * numChannels + k] =agcsignal[k][i];
+                    }
+
+                }
+                WavFile output2 = WavFile.newWavFile(new File(justName + "_agc.wav"), numChannels, numFrames, validBits, fs);
+                output2.writeFrames(buffer,buffer.length);
             }
 
         } catch (Exception e) {
