@@ -113,6 +113,11 @@ public class AGC implements AudioProcessor {
             this.noiseVar = Utils.mean(noiseMag, 0);
         }
 
+        double[] mean = Utils.mean(sampledSignalWindowed, 0);
+        double[] energy = new double[frames];
+        double[] gain = new double[frames];
+        double alpha = 0.96;
+
         for (int i = 0; i < frames; i++) {
             if (i < this.noSpeechSegments) {
                 this.speechFlag = false;
@@ -128,22 +133,31 @@ public class AGC implements AudioProcessor {
                 }
             }
             if (this.speechFlag) {
-                double max = 0;
+                double maxThresh = 0.025;
+                double minThresh = 0.005;
+                energy[i] = 0;
                 for (int k = 0; k < windowLength; k++) {
-                    if (sampledSignalWindowed[k][i] > max) {
-                        max = sampledSignalWindowed[k][i];
-                    }
+                    energy[i] += sampledSignalWindowed[k][i];
                 }
+
                 for (int k = 0; k < windowLength; k++) {
-                    if (sampledSignalWindowed[k][i] > 0.01) {
-                        sampledSignalWindowed[k][i]  = sampledSignalWindowed[k][i] * 0.45 / max;
+                    if (sampledSignalWindowed[k][i] > mean[i]) {
+                        if (energy[i] > minThresh && energy[i] < maxThresh) {
+                            if (i >= 1) {
+                                gain[i] = alpha * gain[i - 1] + (1 - alpha) * Math.sqrt(1.5/ energy[i]);
+                            } else {
+                                gain[i] = 1;
+                            }
+
+                            sampledSignalWindowed[k][i]  = sampledSignalWindowed[k][i] * gain[i];
+                        }
                     }
                 }
             }
         }
 
         double[] enhanced = overlapAndAdd(sampledSignalWindowed, overlapRatio);
-        System.out.println(enhanced.length);
+        // System.out.println(Arrays.toString(energy));
         return enhanced;
     }
 

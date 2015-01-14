@@ -65,10 +65,10 @@ public class Denoiser implements AudioProcessor {
         int signalLength = input[0].length;
 
         double[][] enhanced = new double[channels][signalLength];
-
         for (int i = 0; i < channels; i++) {
             enhanced[i] = process(input[i]);
         }
+
         return enhanced;
     }
 
