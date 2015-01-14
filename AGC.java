@@ -47,7 +47,7 @@ public class AGC implements AudioProcessor {
     }
 
     public AGC(int fs, double noSpeechDuration, int noiseLength, int noiseThreshold, int frameReset) {
-        windowLength = 256;
+        windowLength = 128;
         overlapRatio = 0.5;
         this.fs = fs;
         this.noSpeechDuration = noSpeechDuration;
@@ -133,18 +133,18 @@ public class AGC implements AudioProcessor {
                 }
             }
             if (this.speechFlag) {
-                double maxThresh = 0.025;
-                double minThresh = 0.005;
+                double maxThresh = 0.05;
+                double minThresh = 0.0075;
                 energy[i] = 0;
                 for (int k = 0; k < windowLength; k++) {
-                    energy[i] += sampledSignalWindowed[k][i];
+                    energy[i] += Math.pow(sampledSignalWindowed[k][i],2);
                 }
 
                 for (int k = 0; k < windowLength; k++) {
                     if (sampledSignalWindowed[k][i] > mean[i]) {
                         if (energy[i] > minThresh && energy[i] < maxThresh) {
                             if (i >= 1) {
-                                gain[i] = alpha * gain[i - 1] + (1 - alpha) * Math.sqrt(1.5/ energy[i]);
+                                gain[i] = alpha * gain[i - 1] + (1 - alpha) * Math.sqrt(1/energy[i]);
                             } else {
                                 gain[i] = 1;
                             }
@@ -157,7 +157,7 @@ public class AGC implements AudioProcessor {
         }
 
         double[] enhanced = overlapAndAdd(sampledSignalWindowed, overlapRatio);
-        // System.out.println(Arrays.toString(energy));
+        System.out.println(Arrays.toString(energy));
         return enhanced;
     }
 
